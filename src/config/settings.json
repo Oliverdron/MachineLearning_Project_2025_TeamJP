@@ -1,0 +1,27 @@
+{
+  "data": {
+    "train_path": "data/raw/claims_train.csv",
+    "test_path": "data/raw/claims_test.csv",
+    "processed_dir": "data/processed",
+    "id_col": "IDpol",
+    "target_col": "ClaimNb"
+  },
+  "reports": {
+    "figures_dir": "reports/figures/distributions"
+  },
+  "dtypes": {
+    "Exposure": "float32",
+    "ClaimNb": "int32",
+    "VehAge": "int32",
+    "DrivAge": "int32",
+    "BonusMalus": "int32",
+    "VehBrand": "string",
+    "VehGas": "string",
+    "Region": "string",
+    "Area": "string"
+  },
+  "columns": {
+    "numeric": ["Exposure", "ClaimNb", "VehAge", "DrivAge", "BonusMalus"],
+    "categorical": ["VehBrand", "VehGas", "Region", "Area"]
+  }
+}
