@@ -148,3 +148,96 @@ def validate_and_fix_numeric(df: pd.DataFrame, target_col: str = "ClaimNb") -> p
                 total_fixes, total_flags, df.shape)
 
     return df
+
+
+def clean_categoricals(df: pd.DataFrame, cols: list[str]) -> pd.DataFrame:
+    """
+        Cleans categorical columns by:
+            - Stripping leading/trailing whitespace
+            - Converting to lowercase
+
+        Args:
+            df (pd.DataFrame): The input DataFrame to clean
+            cols (list[str]): List of categorical columns to clean
+
+        Returns:
+            pd.DataFrame: The cleaned DataFrame
+    """
+    # Log starting state
+    logger.info("Cleaning categoricals | requested_cols=%d | df_shape=%s", len(cols), df.shape)
+
+    cleaned = 0
+    skipped_missing = 0
+
+    for c in cols:
+        if c in df.columns:
+            # Log stats before cleaning for traceability
+            logger.debug("Cleaning col=%s | non_null=%d | unique_non_null=%d",
+                         c, int(df[c].notna().sum()), int(df[c].dropna().nunique()))
+
+            df[c] = df[c].astype("string").str.strip().str.lower()
+            cleaned += 1
+        else:
+            # Column list might come from config; shouldn't have missing columns but log just in case
+            logger.debug("Skipping missing categorical col=%s", c)
+            skipped_missing += 1
+
+    # Final log and return
+    logger.info("Finished cleaning categoricals | cleaned=%d | missing_cols_skipped=%d", cleaned, skipped_missing)
+    return df
+
+
+def assert_test_categories_subset(train: pd.DataFrame, test: pd.DataFrame, cols: list[str]) -> None:
+    """
+        Asserts that the categories in the test set are a subset of those in the training set for the specified categorical columns.
+        Raises an error if any unknown categories are found.
+
+        Args:
+            train (pd.DataFrame): The training dataset
+            test (pd.DataFrame): The testing dataset
+            cols (list[str]): The categorical columns to check
+
+        Raises:
+            ValueError: If unknown categories are found in the test set
+    """
+    logger.info("Validating test categories are subset of train | cols=%d | train_shape=%s | test_shape=%s",
+                len(cols), train.shape, test.shape)
+
+    checked = 0
+    skipped_missing = 0
+    violated = 0
+
+    for c in cols:
+        # Should not have missing columns but log and skip just in case
+        if c not in train.columns:
+            logger.debug("Skipping validation for missing train col=%s", c)
+            skipped_missing += 1
+            continue
+        # Should not have missing columns but log and skip just in case
+        if c not in test.columns:
+            logger.debug("Skipping validation for missing test col=%s", c)
+            skipped_missing += 1
+            continue
+
+        checked += 1
+
+        # Get the unique categories in train and test
+        train_set = set(train[c].dropna().unique())
+        test_set  = set(test[c].dropna().unique())
+        # Then compare the two sets to find unknown categories in test
+        unknown = sorted(test_set - train_set)
+
+        # Log stats for this column
+        logger.debug("Category stats col=%s | train_unique=%d | test_unique=%d | unknown=%d",
+                     c, len(train_set), len(test_set), len(unknown))
+
+        # Check if we have a violation
+        if unknown:
+            violated += 1
+            # Keep the log readable; show first N, but still fail hard
+            logger.error("[STOP] Unknown categories in test for '%s': %s", c, unknown[:20])
+            raise ValueError(f"Unknown test categories in column '{c}'")
+
+    # Otherwise, all good
+    logger.info("Category subset validation passed | checked=%d | skipped=%d | violations=%d",
+                checked, skipped_missing, violated)
