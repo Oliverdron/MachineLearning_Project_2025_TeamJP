@@ -44,8 +44,8 @@ def plot_distributions(
     # Categorical plots require claim_col
     plot_categorical_distributions(train=train, out_dir=cat_dir, claim_col=claim_col)
 
-    # Numerical plots to be implemented
-
+    # Numerical plots require claim_col for some plots
+    plot_numerical_distributions(train=train, out_dir=num_dir, claim_col=claim_col)
 
     logger.info("Plotting finished")
 
@@ -369,4 +369,520 @@ def _plot_stacked_bar(
     plt.close(fig)
 
     # log saved plot info
+    logger.info("Saved plot | %s", out_path)
+
+
+def plot_numerical_distributions(train: pd.DataFrame, out_dir: Path, claim_col: str = "ClaimNb") -> None:
+    """
+        Saves all numerical distribution plots (train only).
+
+        Args:
+            train (pd.DataFrame): Training dataset
+            out_dir (Path): Directory to save the figures
+            claim_col (str): Name of target column
+
+        Returns:
+            None
+    """
+    logger.info("Numerical plotting started | out_dir=%s", out_dir)
+
+    # 1) Density - hist(counts) + KDE + IQR
+    _plot_hist_kde_iqr(
+        df=train,
+        col="Density",
+        out_path=out_dir / "density_hist_kde_iqr.png",
+        title="Density: Histogram (counts) + KDE + IQR",
+        xlabel="Density",
+        xlim=None,
+        xs_range=None,
+        clip_iqr=None,
+        focus_right=None,
+    )
+
+    # 2) Exposure - hist(counts) + KDE + IQR (0-1 focus)
+    _plot_hist_kde_iqr(
+        df=train,
+        col="Exposure",
+        out_path=out_dir / "exposure_hist_kde_iqr_0_1.png",
+        title="Exposure: Histogram + KDE + IQR (0-1 focus)",
+        xlabel="Exposure",
+        xlim=(0.0, 1.0),
+        xs_range=(0.0, 1.0),
+        clip_iqr=(0.0, 1.0),
+        focus_right=None,
+    )
+
+    # 3) ClaimNb - binned bar + log y + meaning labels (train only)
+    _plot_claimnb_binned_log(
+        df=train,
+        claim_col=claim_col,
+        out_path=out_dir / "claimnb_binned_log.png",
+    )
+
+    # 4) VehAge - binned stacked (zero vs pos) + counts + %
+    _plot_binned_stacked_claims(
+        df=train,
+        value_col="VehAge",
+        claim_col=claim_col,
+        bins=[0, 3, 6, 11, 21],
+        xtick_labels=[
+            "0-2\n(brand-new)",
+            "3-5\n(fairly new)",
+            "6-10\n(average)",
+            "11-20\n(older car)",
+        ],
+        title="VehAge: counts by claim status",
+        xlabel="Vehicle age bin (years)",
+        out_path=out_dir / "vehage_binned_stacked.png",
+    )
+
+    # 5) DrivAge - binned stacked (zero vs pos) + counts + %
+    _plot_drivage_binned_stacked(
+        df=train,
+        claim_col=claim_col,
+        out_path=out_dir / "drivage_binned_stacked.png",
+    )
+
+    # 6) BonusMalus - hist(counts) + KDE + IQR (focus on main mass)
+    _plot_hist_kde_iqr(
+        df=train,
+        col="BonusMalus",
+        out_path=out_dir / "bonusmalus_hist_kde_iqr.png",
+        title="BonusMalus: Histogram (counts) + KDE + IQR",
+        xlabel="BonusMalus",
+        xlim=None,
+        xs_range=None,
+        clip_iqr=None,
+        focus_right=1.2,  # xlim_right = iqr_upper * 1.2 (clipped to x.max)
+    )
+
+    logger.info("Numerical plotting finished")
+
+
+def _plot_hist_kde_iqr(
+    df: pd.DataFrame,
+    col: str,
+    out_path: Path,
+    title: str,
+    xlabel: str,
+    xlim: tuple[float, float] | None,
+    xs_range: tuple[float, float] | None,
+    clip_iqr: tuple[float, float] | None,
+    focus_right: float | None,
+    bins: int = 50,
+) -> None:
+    """
+        Histogram (counts) + KDE + IQR fences plot for a numerical column.
+
+        Args:
+            df (pd.DataFrame): Input DataFrame
+            col (str): Column name to plot
+            out_path (Path): Path to save the output plot
+            title (str): Title of the plot
+            xlabel (str): Label for the x-axis
+            xlim (tuple[float, float] | None): x-axis limits (min, max) or None for auto
+            xs_range (tuple[float, float] | None): x-range for KDE evaluation or None for auto
+            clip_iqr (tuple[float, float] | None): (min, max) to clip IQR fences or None for no clipping
+            focus_right (float | None): If set, xlim right = min(x.max, iqr_upper * focus_right)
+            bins (int): Number of histogram bins
+
+        Returns:
+            None
+    """
+    # Sanity check
+    if col not in df.columns:
+        logger.warning("Plot skipped | missing col=%s", col)
+        return
+
+    # Make sure data is numeric
+    x = pd.to_numeric(df[col], errors="coerce").dropna().astype(float).values
+    # If no valid numeric data, skip plot
+    if x.size == 0:
+        logger.warning("Plot skipped | empty data after numeric coercion | col=%s", col)
+        return
+
+    # Initialize figure
+    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+
+    # Histogram
+    _, bin_edges, _ = ax.hist(x, bins=bins, color=COLOR_POS, alpha=0.7)
+    # Make sure we have at least 2 bins to compute bin width
+    if len(bin_edges) < 2:
+        logger.warning("Plot skipped | insufficient bins | col=%s", col)
+        plt.close(fig)
+        return
+    # Compute bin width from edges
+    bin_width = float(bin_edges[1] - bin_edges[0])
+
+    # KDE scaled to counts: kde(x) * N * bin_width
+    try:
+        from scipy.stats import gaussian_kde
+        if x.size >= 2 and np.std(x) > 0:
+            # KDE (kernel density estimate) is a probability density whose area integrates to 1
+            # which is not on the same scale as histogram counts, so we scale it
+            kde = gaussian_kde(x)
+            # define range for KDE evaluation based on user input, otherwise use data min/max
+            xs_min = xs_range[0] if xs_range else float(np.min(x))
+            xs_max = xs_range[1] if xs_range else float(np.max(x))
+            # create evenly spaced values for KDE evaluation with 500 points
+            xs = np.linspace(xs_min, xs_max, 500)
+            # kde(xs) gives density values, scale to counts by multiplying by N * bin_width
+            ax.plot(xs, kde(xs) * len(x) * bin_width)
+        else:
+            logger.warning("KDE skipped | insufficient variance/samples | col=%s | n=%d", col, x.size)
+    except Exception:
+        logger.exception("KDE failed | col=%s (hist + IQR still saved)", col)
+
+    # IQR fences
+    q1, q3 = np.percentile(x, [25, 75])
+    iqr = q3 - q1
+    lower = float(q1 - 1.5 * iqr)
+    upper = float(q3 + 1.5 * iqr)
+
+    # clip IQR fences if requested (Exposure wants [0,1])
+    if clip_iqr is not None:
+        lower = max(lower, float(clip_iqr[0]))
+        upper = min(upper, float(clip_iqr[1]))
+
+    # draw dashed lines for IQR fences
+    ax.axvline(lower, linestyle="--", color="black")
+    ax.axvline(upper, linestyle="--", color="black")
+
+    # two modes for x-limit:
+    if focus_right is not None:
+        # focus_right: ignores far right tail beyond iqr_upper * focus_right
+        right = min(float(np.max(x)), upper * float(focus_right))
+        # set xlim from min to computed right
+        ax.set_xlim(float(np.min(x)), right)
+    elif xlim is not None:
+        # user-specified xlim
+        ax.set_xlim(xlim[0], xlim[1])
+
+    # labels and title
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Count")
+
+    # avoid cutting off labels and save figure
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+
+    logger.info("Saved plot | %s", out_path)
+
+
+def _plot_claimnb_binned_log(df: pd.DataFrame, claim_col: str, out_path: Path) -> None:
+    """
+        ClaimNb binned bar plot with log y-axis and meaningful x-tick labels.
+        Bins:
+            0 (profit)
+            1 (reasonable)
+            2-4 (rare)
+            5+ (suspicious fraud)
+
+        Args:
+            df (pd.DataFrame): Input DataFrame
+            claim_col (str): Claim number column
+            out_path (Path): Path to save the output plot
+
+        Returns:
+            None
+    """
+    # Sanity check
+    if claim_col not in df.columns:
+        logger.warning("Plot skipped | missing claim_col=%s", claim_col)
+        return
+
+    # Make sure claim numbers are numeric
+    c = pd.to_numeric(df[claim_col], errors="coerce").fillna(0).astype(int).values
+    if c.size == 0:
+        logger.warning("Plot skipped | empty claims | claim_col=%s", claim_col)
+        return
+
+    # Define edges of bins
+    bins = [0, 1, 2, 5, int(c.max()) + 1]
+    # Bin the claim numbers, left-inclusive and use c.max()+1 to include max value, -1 to get 0-based bin index
+    idx = np.digitize(c, bins, right=False) - 1
+    # Force indices to be within [0, 3]: 0=0, 1=1, 2=2-4, 3=5+
+    idx = np.clip(idx, 0, 3)
+    # Count occurrences in each bin
+    counts = np.bincount(idx, minlength=4)
+
+    # Define x-tick labels that are meaningful
+    xtick_labels = [
+        "0\n(profit)",
+        "1\n(reasonable)",
+        "2-4\n(rare)",
+        "5+\n(suspicious fraud)",
+    ]
+
+    # Initialize figure
+    fig, ax = plt.subplots(figsize=(8.5, 4.8))
+    bars = ax.bar(range(4), counts, color=COLOR_POS)
+
+    # Scale y-axis so 0 claims don't dominate
+    ax.set_yscale("log")
+
+    # white labels on each bar
+    for bar, count in zip(bars, counts):
+        ax.text(
+            # center of the bar
+            bar.get_x() + bar.get_width() / 2,
+            # top of the bar
+            bar.get_height(),
+            f"{int(count):,}",
+            ha="center",
+            va="bottom",
+            color="white",
+            fontsize=9,
+        )
+
+    # labels and title
+    ax.set_xticks(range(4))
+    ax.set_xticklabels(xtick_labels)
+    ax.set_title("ClaimNb: Binned counts (log scale)")
+    ax.set_ylabel("Number of policies (log scale)")
+
+    # avoid cutting off labels and save figure
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+
+    logger.info("Saved plot | %s", out_path)
+
+
+def _plot_binned_stacked_claims(
+    df: pd.DataFrame,
+    value_col: str,
+    claim_col: str,
+    bins: list[float],
+    xtick_labels: list[str],
+    title: str,
+    xlabel: str,
+    out_path: Path,
+) -> None:
+    """
+        Binned stacked bar plot for a numerical column showing counts of zero vs positive claims.
+
+        Args:
+            df (pd.DataFrame): Input DataFrame
+            value_col (str): Numerical column to bin
+            claim_col (str): Claim number column
+            bins (list[float]): List of bin edges
+            xtick_labels (list[str]): Labels for each bin
+            title (str): Title of the plot
+            xlabel (str): Label for the x-axis
+            out_path (Path): Path to save the output plot
+
+        Returns:
+            None
+    """
+    # Sanity check
+    if value_col not in df.columns:
+        logger.warning("Plot skipped | missing col=%s", value_col)
+        return
+    
+    # Sanity check
+    if claim_col not in df.columns:
+        logger.warning("Plot skipped | missing claim_col=%s", claim_col)
+        return
+
+    # Make sure data is numeric
+    values = pd.to_numeric(df[value_col], errors="coerce").astype(float).values
+    claims = pd.to_numeric(df[claim_col], errors="coerce").fillna(0).astype(int).values
+
+    # Bin assignment
+    idx = np.digitize(values, bins, right=False) - 1
+    # Clip indices to valid range
+    n_bins = len(xtick_labels)
+    idx = np.clip(idx, 0, n_bins - 1)
+
+    # Initialize counts (zero, positive, total) for each bin
+    zero = np.zeros(n_bins, dtype=int)
+    pos = np.zeros(n_bins, dtype=int)
+    total = np.zeros(n_bins, dtype=int)
+
+    # Count occurrences in each bin
+    for b in range(n_bins):
+        # After assigning each value to a bin, create a mask that selects only values in bin b
+        mask = idx == b
+        # Count zero and positive claims
+        z = int(np.sum(claims[mask] == 0))
+        p = int(np.sum(claims[mask] > 0))
+        # Store counts
+        zero[b] = z
+        pos[b] = p
+        total[b] = z + p
+
+    # Compute percentages for annotations
+    pct_zero = np.divide(zero, total, out=np.zeros_like(zero, dtype=float), where=total > 0)
+    pct_pos = np.divide(pos, total, out=np.zeros_like(pos, dtype=float), where=total > 0)
+
+    # Initialize figure
+    fig, ax = plt.subplots(figsize=(9.0, 4.8))
+    xpos = np.arange(n_bins)
+
+    # Plot stacked bars
+    ax.bar(xpos, zero, color=COLOR_ZERO, label="ClaimNb = 0")
+    ax.bar(xpos, pos, bottom=zero, color=COLOR_POS, label="ClaimNb > 0")
+
+    # Set ticks and labels
+    ax.set_xticks(xpos)
+    ax.set_xticklabels(xtick_labels)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel("Number of policies")
+    ax.legend()
+
+    # Vertical offset for text annotations, so they don't overlap with bars
+    y_offset = total.max() * 0.01 if total.max() > 0 else 1.0
+
+    # Annotations for each bin
+    for b in range(n_bins):
+        # Zero claims annotation inside the bar
+        ax.text(
+            xpos[b],
+            zero[b] / 2 if zero[b] > 0 else 0.0,
+            f"{zero[b]:,}\n({pct_zero[b] * 100:.1f}%)",
+            ha="center",
+            va="center",
+            fontsize=8,
+            color="black",
+        )
+
+        # Positive claims annotation above the bar
+        ax.text(
+            xpos[b],
+            total[b] + y_offset,
+            f"{pos[b]:,}\n({pct_pos[b] * 100:.1f}%)",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="black",
+        )
+
+    # Avoid cutting off labels and save figure
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+
+    logger.info("Saved plot | %s", out_path)
+
+
+def _plot_drivage_binned_stacked(df: pd.DataFrame, claim_col: str, out_path: Path) -> None:
+    """
+        DrivAge binned stacked bar plot showing counts of zero vs positive claims.
+        Bins:
+            18-25
+            26-35
+            36-45
+            46-60
+            60+
+
+        Args:
+            df (pd.DataFrame): Input DataFrame
+            claim_col (str): Claim number column
+            out_path (Path): Path to save the output plot
+
+        Returns:
+            None
+    """
+    # Sanity check
+    if "DrivAge" not in df.columns:
+        logger.warning("Plot skipped | missing col=DrivAge")
+        return
+    
+    # Sanity check
+    if claim_col not in df.columns:
+        logger.warning("Plot skipped | missing claim_col=%s", claim_col)
+        return
+
+    # Make sure data is numeric
+    age = pd.to_numeric(df["DrivAge"], errors="coerce").astype(float).values
+    claims = pd.to_numeric(df[claim_col], errors="coerce").fillna(0).astype(int).values
+
+    # Fetch the maximum age ingoring NaNs; if all NaN, default to 61.0
+    max_age = float(np.nanmax(age)) if np.isfinite(np.nanmax(age)) else 61.0
+    # Ensure last edge is at least 62.0 to cover 60+, if max_age is greater, extend by 1 so that max_age is included
+    last_edge = max(62.0, max_age + 1.0)
+
+    # Define bins and labels
+    bins = [18, 26, 36, 46, 61, last_edge]
+    xtick_labels = ["18-25", "26-35", "36-45", "46-60", "60+"]
+
+    # Bin assignment, left-inclusive, -1 to get 0-based bin index
+    idx = np.digitize(age, bins, right=False) - 1
+    # Clip indices to valid range
+    n_bins = len(xtick_labels)
+    idx = np.clip(idx, 0, n_bins - 1)
+
+    # Initialize counts (zero, positive, total) for each bin
+    zero = np.zeros(n_bins, dtype=int)
+    pos = np.zeros(n_bins, dtype=int)
+    total = np.zeros(n_bins, dtype=int)
+
+    # Count occurrences in each bin
+    for b in range(n_bins):
+        # After assigning each value to a bin, create a mask that selects only values in bin b
+        mask = idx == b
+        # Count zero and positive claims
+        z = int(np.sum(claims[mask] == 0))
+        p = int(np.sum(claims[mask] > 0))
+        # Store counts
+        zero[b] = z
+        pos[b] = p
+        total[b] = z + p
+
+    # Compute percentages for annotations
+    pct_zero = np.divide(zero, total, out=np.zeros_like(zero, dtype=float), where=total > 0)
+    pct_pos = np.divide(pos, total, out=np.zeros_like(pos, dtype=float), where=total > 0)
+
+    # Initialize figure
+    fig, ax = plt.subplots(figsize=(9.0, 4.8))
+    xpos = np.arange(n_bins)
+
+    # Plot stacked bars
+    ax.bar(xpos, zero, color=COLOR_ZERO, label="ClaimNb = 0")
+    ax.bar(xpos, pos, bottom=zero, color=COLOR_POS, label="ClaimNb > 0")
+
+    # Set ticks and labels
+    ax.set_xticks(xpos)
+    ax.set_xticklabels(xtick_labels)
+    ax.set_title("DrivAge: counts by claim status")
+    ax.set_xlabel("Driver age bin (years)")
+    ax.set_ylabel("Number of policies")
+    ax.legend()
+
+    # Vertical offset for text annotations, so they don't overlap with bars
+    y_offset = total.max() * 0.01 if total.max() > 0 else 1.0
+
+    # Annotations for each bin
+    for b in range(n_bins):
+        # Zero claims annotation inside the bar
+        ax.text(
+            xpos[b],
+            zero[b] / 2 if zero[b] > 0 else 0.0,
+            f"{zero[b]:,}\n({pct_zero[b] * 100:.1f}%)",
+            ha="center",
+            va="center",
+            fontsize=8,
+            color="black",
+        )
+
+        # Positive claims annotation above the bar
+        ax.text(
+            xpos[b],
+            total[b] + y_offset,
+            f"{pos[b]:,}\n({pct_pos[b] * 100:.1f}%)",
+            ha="center",
+            va="bottom",
+            fontsize=8,
+            color="black",
+        )
+
+    # Avoid cutting off labels and save figure
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=200)
+    plt.close(fig)
+
     logger.info("Saved plot | %s", out_path)
