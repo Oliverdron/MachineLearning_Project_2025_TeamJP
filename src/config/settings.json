@@ -18,26 +18,28 @@
   "encoding": {
     "ordinal_cols": ["Area"],
     "ordinal_orders": {
-      "Area": ["A", "B", "C", "D", "E", "F"]
+      "Area": ["a", "b", "c", "d", "e", "f"]
     },
     "onehot_cols": ["VehBrand", "VehGas", "Region"],
     "onehot_drop": "first",
     "unknown_ordinal_value": -1
   },
   "dtypes": {
+    "IDpol": "string",
     "Exposure": "float32",
-    "ClaimNb": "int32",
-    "VehAge": "int32",
-    "DrivAge": "int32",
-    "BonusMalus": "int32",
-    "VehPower": "int32",
+    "ClaimNb": "Int32",
+    "VehAge": "Int32",
+    "DrivAge": "Int32",
+    "BonusMalus": "Int32",
+    "VehPower": "Int32",
+    "Density": "float32",
     "VehBrand": "string",
     "VehGas": "string",
     "Region": "string",
     "Area": "string"
   },
   "columns": {
-    "numeric": ["Exposure", "ClaimNb", "VehAge", "DrivAge", "BonusMalus", "VehPower"],
+    "numeric": ["Exposure", "ClaimNb", "VehAge", "DrivAge", "BonusMalus", "VehPower", "Density"],
     "categorical": ["VehBrand", "VehGas", "Region", "Area"]
   }
 }
