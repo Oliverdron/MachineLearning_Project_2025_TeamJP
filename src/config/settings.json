@@ -9,19 +9,35 @@
   "reports": {
     "figures_dir": "reports/figures/distributions"
   },
+  "logging": {
+    "log_dir": "data/logging",
+    "console_level": "DEBUG",
+    "max_bytes": 10000000,
+    "backup_count": 5
+  },
+  "encoding": {
+    "ordinal_cols": ["Area"],
+    "ordinal_orders": {
+      "Area": ["A", "B", "C", "D", "E", "F"]
+    },
+    "onehot_cols": ["VehBrand", "VehGas", "Region"],
+    "onehot_drop": "first",
+    "unknown_ordinal_value": -1
+  },
   "dtypes": {
     "Exposure": "float32",
     "ClaimNb": "int32",
     "VehAge": "int32",
     "DrivAge": "int32",
     "BonusMalus": "int32",
+    "VehPower": "int32",
     "VehBrand": "string",
     "VehGas": "string",
     "Region": "string",
     "Area": "string"
   },
   "columns": {
-    "numeric": ["Exposure", "ClaimNb", "VehAge", "DrivAge", "BonusMalus"],
+    "numeric": ["Exposure", "ClaimNb", "VehAge", "DrivAge", "BonusMalus", "VehPower"],
     "categorical": ["VehBrand", "VehGas", "Region", "Area"]
   }
 }
