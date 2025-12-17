@@ -31,7 +31,13 @@ def load_csv(path: str, dtypes: dict) -> pd.DataFrame:
     # wrap in try/except to catch and log any errors
     try:
         # load CSV with specified dtypes
-        df = pd.read_csv(p, dtype=dtypes)
+        df = pd.read_csv(p,
+                         dtype=dtypes,
+                         thousands=",",
+                         na_values=["", " ", "NA", "N/A", "None", "null"],
+                         keep_default_na=True,
+                         skipinitialspace=True,
+                        )
     except Exception:
         # includes stack trace automatically
         logger.exception("Failed reading CSV: %s", p)

@@ -1,5 +1,6 @@
 import logging
 import pandas as pd
+import numpy as np
 from sklearn.impute import KNNImputer, SimpleImputer
 
 # create logger for this module
@@ -96,9 +97,13 @@ def mode_impute_categorical(train: pd.DataFrame, test: pd.DataFrame, cols: list[
         logger.info("Mode categorical impute skipped | reason=no_matching_cols")
         return train, test
 
-    # Use pandas string dtype for consistent missing handling
-    train_cat = train[cols].astype("string")
-    test_cat  = test[cols].astype("string")
+    # Make copies of only the categorical columns to impute
+    train_cat = train[cols].astype("object")
+    test_cat  = test[cols].astype("object")
+
+    # SimpleImputer can't mask pd.NA so convert to np.nan
+    train_cat = train_cat.where(train_cat.notna(), np.nan)
+    test_cat  = test_cat.where(test_cat.notna(), np.nan)
 
     # Set up and fit the imputer on train only (prevents leakage)
     logger.info("Mode categorical impute | initializing and fitting imputer on train")

@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 
 # create logger for this module
 logger = logging.getLogger(__name__)
+plt.set_loglevel("warning")  # suppress matplotlib debug/info logs
 
 # Colors for plotting
 COLOR_ZERO = "#234C6A"   # ClaimNb = 0
