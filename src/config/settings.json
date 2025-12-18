@@ -1,4 +1,10 @@
 {
+  "logging": {
+    "log_dir": "data/logging",
+    "console_level": 20,
+    "max_bytes": 10000000,
+    "backup_count": 5
+  },
   "data": {
     "train_path": "data/raw/claims_train.csv",
     "test_path": "data/raw/claims_test.csv",
@@ -7,39 +13,75 @@
     "target_col": "ClaimNb"
   },
   "reports": {
-    "figures_dir": "reports/figures/distributions"
-  },
-  "logging": {
-    "log_dir": "data/logging",
-    "console_level": "DEBUG",
-    "max_bytes": 10000000,
-    "backup_count": 5
-  },
-  "encoding": {
-    "ordinal_cols": ["Area"],
-    "ordinal_orders": {
-      "Area": ["a", "b", "c", "d", "e", "f"]
-    },
-    "onehot_cols": ["VehBrand", "VehGas", "Region"],
-    "onehot_drop": "first",
-    "unknown_ordinal_value": -1
+    "figures_dir": "reports/figures/data"
   },
   "dtypes": {
-    "IDpol": "string",
-    "Exposure": "float32",
-    "ClaimNb": "Int32",
-    "VehAge": "Int32",
-    "DrivAge": "Int32",
-    "BonusMalus": "Int32",
-    "VehPower": "Int32",
-    "Density": "float32",
-    "VehBrand": "string",
-    "VehGas": "string",
-    "Region": "string",
-    "Area": "string"
+    "IDpol": "Int64",
+    "ClaimNb": "int64",
+    "Exposure": "float64",
+    "Area": "category",
+    "VehPower": "int64",
+    "VehAge": "int64",
+    "DrivAge": "int64",
+    "BonusMalus": "int64",
+    "VehBrand": "category",
+    "VehGas": "category",
+    "Density": "int64",
+    "Region": "category"
   },
   "columns": {
-    "numeric": ["Exposure", "ClaimNb", "VehAge", "DrivAge", "BonusMalus", "VehPower", "Density"],
-    "categorical": ["VehBrand", "VehGas", "Region", "Area"]
+    "numeric": ["Exposure", "VehPower", "VehAge", "DrivAge", "BonusMalus", "Density"],
+    "categorical": ["Area", "VehBrand", "VehGas", "Region"]
+  },
+  "encoding": {
+    "ordinal_cols": [],
+    "onehot_cols": ["Area", "VehBrand", "VehGas", "Region"],
+    "ordinal_orders": {},
+    "onehot_drop": null,
+    "unknown_ordinal_value": -1
+  },
+  "evaluation": {
+    "metrics": ["rmse", "mae", "r2"],
+    "save_plots": true,
+    "plots_dir": "reports/figures/models"
+  },
+  "models": {
+    "seed": 42,
+    "k_folds": 5,
+    "shuffle": true,
+    "enabled": ["ffnn_numpy"],
+    "save_best_model": false,
+    "artifacts_dir": "artifacts/models",
+    "definitions": {
+      "ffnn_numpy": {
+        "params": {
+          "input_dim": 0,
+          "hidden_layers": [128, 64],
+          "activations": ["relu", "relu"],
+          "output_activation": "linear",
+          "loss": "mse",
+          "optimizer": { "name": "momentum", "lr": 0.001, "beta": 0.9, "weight_decay": 0.0 },
+          "batch_size": 1024,
+          "epochs": 50,
+          "seed": 42,
+          "weight_init": "he",
+          "early_stopping": true,
+          "patience": 8,
+          "min_delta": 1e-5,
+          "grad_clip": 5.0
+        },
+        "param_space": {
+          "hidden_layers": [[128, 64], [256, 128]],
+          "batch_size": [512, 1024],
+          "epochs": [50, 100],
+          "optimizer": [
+            { "name": "momentum", "lr": 0.001, "beta": 0.9, "weight_decay": 0.0 },
+            { "name": "sgd", "lr": 0.005, "weight_decay": 0.0 }
+          ]
+        },
+        "tune_hyperparams": false,
+        "n_trials": 10
+      }
+    }
   }
 }
