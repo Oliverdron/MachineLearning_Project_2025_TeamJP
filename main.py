@@ -3,6 +3,8 @@ import logging
 
 from src.config.logging import setup_logging
 from src.data.digest_data import DataDigestion
+# pca and clustering imports would go here
+from src.models.runner import run_models
 
 
 def main() -> None:
@@ -36,9 +38,13 @@ def main() -> None:
     # Then check if these files exist, if so, skip previous steps and do modeling
 
     # 3.) Modeling
-    # Will get the np arrays, call decision tree and feed forward neural network implementations
-    
+    logger.info("Starting modeling pipeline...")
+    results = run_models(cfg, train, test)
     logger.info("Pipeline finished | train_shape=%s | test_shape=%s", train.shape, test.shape)
+    
+    # Log results summary
+    for model_name, result in results.items():
+        logger.info("Model: %s | Metrics: %s", model_name, result.metrics)
 
 
 if __name__ == "__main__":
