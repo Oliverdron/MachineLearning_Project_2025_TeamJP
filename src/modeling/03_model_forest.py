@@ -1,5 +1,50 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
+import logging
+
+logger = logging.getLogger(__name__)
+
+class SklearnRandomForestRegressor:
+    """
+    Wrapper around sklearn's RandomForestRegressor
+    with a unified save/load interface.
+    """
+
+    def __init__(self, **cfg):
+        """
+        Args:
+            cfg (dict): Hyperparameters for RandomForestRegressor
+        """
+        self.cfg = cfg
+        self.model = RandomForestRegressor(**cfg)
+
+    def fit(self, X, y):
+        self.model.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return self.model.predict(X)
+
+    def save(self, path: str) -> str:
+        """
+        Save the Random Forest model to a compressed .npz file.
+
+        Args:
+            path (str): Path to save the model
+
+        Returns:
+            str: Path where the model was saved
+        """
+        np.savez_compressed(
+            path,
+            model=np.array(self.model, dtype=object),
+            cfg=self.cfg,
+        )
+
+        logger.info(f"SklearnRandomForestRegressor saved to {path}")
+        return path
+
+
 
 # ---------------------------------------------------
 # Random Forest Regressor (Library Implementation)

@@ -1,4 +1,7 @@
 import numpy as np
+import logging
+
+logger = logging.getLogger(__name__)
 
 # -------------------------------
 # Node class (tree building block)
@@ -262,6 +265,31 @@ class DecisionTreeRegressorFromScratch:
         - numpy array of predictions, shape (n_samples,)
         """
         return np.array([self._traverse_tree(x, self.root) for x in X])
+    
+    def save(self, path: str) -> str:
+        """
+        Save the decision tree model to a compressed .npz file.
+
+        Args:
+            path (str): Path to save the model
+
+        Returns:
+            str: Path where the model was saved
+        """
+        np.savez_compressed(
+            path,
+            # Hyperparameters
+            max_depth=self.max_depth,
+            min_samples_split=self.min_samples_split,
+            min_samples_leaf=self.min_samples_leaf,
+            min_impurity_decrease=self.min_impurity_decrease,
+
+            # Learned structure (recursive Node tree)
+            root=np.array(self.root, dtype=object),
+        )
+
+        logger.info(f"DecisionTreeRegressorFromScratch saved to {path}")
+        return path
 
 """
 Extra notes (practical/implementation details):
@@ -286,6 +314,37 @@ Extra notes (practical/implementation details):
 
 
 from sklearn.tree import DecisionTreeRegressor
+
+class SklearnDecisionTreeRegressor:
+    def __init__(self, **cfg):
+        self.cfg = cfg
+        self.model = DecisionTreeRegressor(**cfg)
+
+    def fit(self, X, y):
+        self.model.fit(X, y)
+        return self
+
+    def predict(self, X):
+        return self.model.predict(X)
+
+    def save(self, path: str) -> str:
+        """
+        Save the sklearn DecisionTreeRegressor to a compressed .npz file.
+
+        Args:
+            path (str): Path to save the model
+
+        Returns:
+            str: Path where the model was saved
+        """
+        np.savez_compressed(
+            path,
+            model=np.array(self.model, dtype=object),
+            cfg=self.cfg,
+        )
+
+        logger.info(f"SklearnDecisionTreeRegressor saved to {path}")
+        return path
 
 # ---------------------------------------------------
 # Decision Tree Regressor (Library Implementation)
