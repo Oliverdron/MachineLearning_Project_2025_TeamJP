@@ -5,6 +5,7 @@
     "max_bytes": 10000000,
     "backup_count": 5
   },
+
   "data": {
     "train_path": "data/raw/claims_train.csv",
     "test_path": "data/raw/claims_test.csv",
@@ -12,9 +13,11 @@
     "id_col": "IDpol",
     "target_col": "ClaimNb"
   },
+
   "reports": {
     "figures_dir": "reports/figures/data"
   },
+
   "dtypes": {
     "IDpol": "Int64",
     "ClaimNb": "int64",
@@ -29,30 +32,130 @@
     "Density": "int64",
     "Region": "category"
   },
+
   "columns": {
-    "numeric": ["Exposure", "VehPower", "VehAge", "DrivAge", "BonusMalus", "Density"],
-    "categorical": ["Area", "VehBrand", "VehGas", "Region"]
+    "numeric": [
+      "Exposure",
+      "VehPower",
+      "VehAge",
+      "DrivAge",
+      "BonusMalus",
+      "Density"
+    ],
+    "categorical": [
+      "Area",
+      "VehBrand",
+      "VehGas",
+      "Region"
+    ]
   },
+
   "encoding": {
     "ordinal_cols": [],
-    "onehot_cols": ["Area", "VehBrand", "VehGas", "Region"],
+    "onehot_cols": [
+      "Area",
+      "VehBrand",
+      "VehGas",
+      "Region"
+    ],
     "ordinal_orders": {},
     "onehot_drop": null,
     "unknown_ordinal_value": -1
   },
+
   "evaluation": {
     "metrics": ["rmse", "mae", "r2"],
     "save_plots": true,
     "plots_dir": "reports/figures/models"
   },
+
   "models": {
     "seed": 42,
     "k_folds": 5,
     "shuffle": true,
-    "enabled": ["ffnn_numpy"],
-    "save_best_model": false,
+
+    "enabled": [
+      "decision_tree_scratch",
+      "decision_tree_sklearn",
+      "random_forest_sklearn",
+      "ffnn_numpy"
+    ],
+
+    "save_best_model": true,
     "artifacts_dir": "artifacts/models",
+
     "definitions": {
+
+      /* ----------------------------------------
+         Decision Tree – From Scratch
+         ---------------------------------------- */
+      "decision_tree_scratch": {
+        "params": {
+          "max_depth": null,
+          "min_samples_split": 2,
+          "min_samples_leaf": 1,
+          "min_impurity_decrease": 0.0
+        },
+        "param_space": {
+          "max_depth": [3, 5, 10, null],
+          "min_samples_split": [2, 10, 50],
+          "min_samples_leaf": [1, 5, 20],
+          "min_impurity_decrease": [0.0, 0.001, 0.01]
+        },
+        "tune_hyperparams": true,
+        "n_trials": 5
+      },
+
+      /* ----------------------------------------
+         Decision Tree – sklearn
+         ---------------------------------------- */
+      "decision_tree_sklearn": {
+        "params": {
+          "criterion": "squared_error",
+          "max_depth": null,
+          "min_samples_split": 2,
+          "min_samples_leaf": 1,
+          "min_impurity_decrease": 0.0,
+          "random_state": 42
+        },
+        "param_space": {
+          "max_depth": [3, 5, 10, null],
+          "min_samples_split": [2, 10, 50],
+          "min_samples_leaf": [1, 5, 20],
+          "min_impurity_decrease": [0.0, 0.001, 0.01]
+        },
+        "tune_hyperparams": true,
+        "n_trials": 10
+      },
+
+      /* ----------------------------------------
+         Random Forest – sklearn
+         ---------------------------------------- */
+      "random_forest_sklearn": {
+        "params": {
+          "n_estimators": 200,
+          "criterion": "squared_error",
+          "max_depth": null,
+          "min_samples_split": 2,
+          "min_samples_leaf": 1,
+          "max_features": "sqrt",
+          "bootstrap": true,
+          "n_jobs": -1,
+          "random_state": 42
+        },
+        "param_space": {
+          "n_estimators": [100, 200, 400],
+          "max_depth": [null, 10, 20],
+          "min_samples_leaf": [1, 5, 20],
+          "max_features": ["sqrt", "log2"]
+        },
+        "tune_hyperparams": true,
+        "n_trials": 10
+      },
+
+      /* ----------------------------------------
+         Feedforward Neural Network – NumPy
+         ---------------------------------------- */
       "ffnn_numpy": {
         "params": {
           "input_dim": 0,
@@ -60,7 +163,12 @@
           "activations": ["relu", "relu"],
           "output_activation": "linear",
           "loss": "mse",
-          "optimizer": { "name": "momentum", "lr": 0.001, "beta": 0.9, "weight_decay": 0.0 },
+          "optimizer": {
+            "name": "momentum",
+            "lr": 0.001,
+            "beta": 0.9,
+            "weight_decay": 0.0
+          },
           "batch_size": 1024,
           "epochs": 50,
           "seed": 42,
