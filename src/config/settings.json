@@ -62,7 +62,22 @@
     "onehot_drop": null,
     "unknown_ordinal_value": -1
   },
+<<<<<<< Updated upstream
 
+=======
+  "pca": {
+    "variance_cutoff": 0.95,
+    "random_state": 42,
+    "figures_dir": "reports/figures/pca"
+  },
+  "clustering": {
+    "k_min": 2,
+    "k_max": 8,
+    "n_init": 10,
+    "random_state": 42,
+    "figures_dir": "reports/figures/clustering"
+  },
+>>>>>>> Stashed changes
   "evaluation": {
     "metrics": ["rmse", "mae", "r2"],
     "save_plots": true,
