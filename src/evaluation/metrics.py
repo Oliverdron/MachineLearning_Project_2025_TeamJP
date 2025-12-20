@@ -109,7 +109,7 @@ METRICS = {
 }
 
 
-def compute_metrics(metric_names, y_true, y_pred) -> Dict[str, float]:
+def compute_metrics(metric_names: list, y_true: np.ndarray, y_pred: np.ndarray) -> Dict[str, float]:
     """
     Compute evaluation metrics for model predictions.
 

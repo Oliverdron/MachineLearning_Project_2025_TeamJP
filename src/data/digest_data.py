@@ -179,6 +179,12 @@ class DataDigestion:
         )
         logger.info("Plotting distributions finished")
 
+        # Handle leakage for ClaimRate target (cant drop it earlier due to plotting)
+        if self.target_col == "ClaimRate":
+            logger.info("Target column is ClaimRate; dropping ClaimNb to avoid leakage")
+            train.drop(columns=["ClaimNb"], inplace=True, errors="ignore")
+            test.drop(columns=["ClaimNb"], inplace=True, errors="ignore")
+
         # Encoding
         logger.info("Encoding started")
         train_cat = train[self.cat_cols]

@@ -24,10 +24,12 @@ class ModelResult:
     y_pred: np.ndarray
 
     y_pred_train: Optional[np.ndarray] = None
-    # Pass a callable to create a fresh dict for each instance if not provided
     history: Dict[str, list] = field(default_factory=dict)
-    metrics: Dict[str, float] = field(default_factory=dict)
+    metrics: Dict[str, Any] = field(default_factory=dict)
     params: Dict[str, Any] = field(default_factory=dict)
+
+    stage: str = "unknown"  # e.g.: "cv", "test"
+    feature_set: str = "unknown"  # e.g.: "tree", "nn"
 
     model_artifact_path: Optional[str] = None
     plots_dir: Optional[str] = None
