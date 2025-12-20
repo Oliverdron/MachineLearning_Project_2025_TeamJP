@@ -1,8 +1,37 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 import logging
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class RandomForestSklearnConfig:
+    """
+    Configuration for sklearn RandomForestRegressor.
+
+    Args:
+        n_estimators (int): Number of trees in the forest
+        criterion (str): Split quality metric
+        max_depth (Optional[int]): Maximum depth of each tree
+        min_samples_split (int): Minimum samples required to split
+        min_samples_leaf (int): Minimum samples per leaf
+        max_features (str): Number of features considered at each split
+        bootstrap (bool): Whether bootstrap samples are used
+        n_jobs (int): Number of parallel jobs (-1 = all cores)
+        random_state (Optional[int]): Random seed
+    """
+    n_estimators: int = 100
+    criterion: str = "squared_error"
+    max_depth: Optional[int] = None
+    min_samples_split: int = 2
+    min_samples_leaf: int = 1
+    max_features: str = "sqrt"
+    bootstrap: bool = True
+    n_jobs: int = -1
+    random_state: Optional[int] = None
+
 
 class SklearnRandomForestRegressor:
     """
@@ -10,13 +39,30 @@ class SklearnRandomForestRegressor:
     with a unified save/load interface.
     """
 
-    def __init__(self, **cfg):
+    def __init__(self, cfg: RandomForestSklearnConfig):
         """
         Args:
             cfg (dict): Hyperparameters for RandomForestRegressor
         """
+        
         self.cfg = cfg
-        self.model = RandomForestRegressor(**cfg)
+        self.model = RandomForestRegressor(cfg)
+        self.n_estimators = cfg.n_estimators
+        self.criterion = cfg.criterion
+        self.max_depth = cfg.max_depth
+        self.min_samples_split = cfg.min_samples_split
+        self.min_samples_leaf = cfg.min_samples_leaf
+        self.max_features = cfg.max_features
+        self.bootstrap = cfg.bootstrap
+        self.n_jobs = cfg.n_jobs
+        self.random_state = cfg.random_state
+        
+        if self.n_estimators <= 0:
+            raise ValueError("n_estimators must be > 0")
+        if self.min_samples_split < 2:
+            raise ValueError("min_samples_split must be >= 2")
+        if self.min_samples_leaf < 1:
+            raise ValueError("min_samples_leaf must be >= 1")
 
     def fit(self, X, y):
         self.model.fit(X, y)
@@ -182,16 +228,16 @@ rf = RandomForestRegressor(
 # ---------------------------------------------
 
 # Fit the random forest to the training data
-rf.fit(X, y)
+# rf.fit(X, y)
 
 # Predict by averaging predictions from all trees
-y_pred = rf.predict(X_test)
+# y_pred = rf.predict(X_test)
 
 # Number of trees
-num_trees = len(rf.estimators_)
+# num_trees = len(rf.estimators_)
 
 # Out-of-bag R^2 score (if oob_score=True)
-oob_r2 = rf.oob_score_
+# oob_r2 = rf.oob_score_
 
 # Feature importance (averaged over all trees)
-feature_importances = rf.feature_importances_
+# feature_importances = rf.feature_importances_

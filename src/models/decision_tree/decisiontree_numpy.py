@@ -1,7 +1,26 @@
 import numpy as np
 import logging
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class DecisionTreeScratchConfig:
+    """
+    Configuration for Decision Tree Regressor implemented from scratch (NumPy).
+
+    Args:
+        max_depth (Optional[int]): Maximum depth of the tree (None = unlimited)
+        min_samples_split (int): Minimum samples required to split a node
+        min_samples_leaf (int): Minimum samples required in a leaf node
+        min_impurity_decrease (float): Minimum MSE decrease required to split
+    """
+    max_depth: Optional[int] = None
+    min_samples_split: int = 2
+    min_samples_leaf: int = 1
+    min_impurity_decrease: float = 0.0
+
 
 # -------------------------------
 # Node class (tree building block)
@@ -58,8 +77,7 @@ class DecisionTreeRegressorFromScratch:
     - greedy splitting: at each node, pick the split that most reduces MSE
     - axis-aligned splits: one feature at a time with a threshold
     """
-    def __init__(self, max_depth=None, min_samples_split=2,
-                 min_samples_leaf=1, min_impurity_decrease=0.0):
+    def __init__(self, cfg: DecisionTreeScratchConfig):
         """
         Hyperparameters (how the tree is controlled):
 
@@ -85,13 +103,21 @@ class DecisionTreeRegressorFromScratch:
         - If the best gain is smaller than this, do not split (make a leaf).
         - Increasing it makes the tree more conservative (fewer splits).
         """
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.min_samples_leaf = min_samples_leaf
-        self.min_impurity_decrease = min_impurity_decrease
+        self.cfg = cfg
+        self.max_depth = cfg.max_depth
+        self.min_samples_split = cfg.min_samples_split
+        self.min_samples_leaf = cfg.min_samples_leaf
+        self.min_impurity_decrease = cfg.min_impurity_decrease
 
         # root will hold the top Node after fitting
         self.root = None
+
+        if self.min_samples_split < 2:
+            raise ValueError("min_samples_split must be >= 2")
+        if self.min_samples_leaf < 1:
+            raise ValueError("min_samples_leaf must be >= 1")
+        if self.max_depth is not None and self.max_depth <= 0:
+            raise ValueError("max_depth must be positive or None")
 
     def fit(self, X, y):
         """
