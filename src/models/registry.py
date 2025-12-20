@@ -11,6 +11,7 @@ class ModelSpec:
 
 def init_registry() -> dict[str, ModelSpec]:
     from src.models.neural_network.ffnn_numpy import FFNNNumpyRegressor, FFNNNumpyConfig
+    from src.models.neural_network.ffnn_torch import FFNNTorchRegressor, FFNNTorchConfig
     return {
         "ffnn_numpy": ModelSpec(
             Config=FFNNNumpyConfig,
@@ -18,6 +19,10 @@ def init_registry() -> dict[str, ModelSpec]:
             metric="rmse",
             direction="min",
         ),
-        # Add other models here
-        # Should have every model and only the ones enabled in settings.json will be used
+        "ffnn_torch": ModelSpec(
+            Config=FFNNTorchConfig,
+            Model=FFNNTorchRegressor,
+            metric="rmse",
+            direction="min",
+        ),
     }

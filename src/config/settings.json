@@ -87,7 +87,8 @@
     "shuffle": true,
 
     "enabled": [
-      "ffnn_numpy"
+      "ffnn_numpy",
+      "ffnn_torch"
     ],
 
     "save_best_model": true,
@@ -95,9 +96,9 @@
 
     "definitions": {
       "ffnn_numpy": {
+        "feature_set": "nn",
         "params": {
-          "input_dim": 16,
-          "hidden_layers": [128, 64],
+          "hidden_layers": [256, 128],
           "activations": ["relu", "relu"],
           "output_activation": "linear",
           "loss": "mse",
@@ -108,7 +109,7 @@
             "weight_decay": 0.0
           },
           "batch_size": 1024,
-          "epochs": 10,
+          "epochs": 20,
           "seed": 42,
           "weight_init": "he",
           "early_stopping": true,
@@ -123,6 +124,40 @@
           "optimizer": [
             { "name": "momentum", "lr": 0.001, "beta": 0.9, "weight_decay": 0.0 },
             { "name": "sgd", "lr": 0.005, "weight_decay": 0.0 }
+          ]
+        },
+        "tune_hyperparams": false,
+        "n_trials": 5
+      }, 
+      "ffnn_torch": {
+        "feature_set": "nn",
+        "params": {
+          "hidden_layers": [256, 128],
+          "activations": ["relu", "relu"],
+          "dropout": 0.1,
+          "output_activation": "linear",
+          "loss": "mse",
+          "optimizer": {
+            "name": "adam",
+            "lr": 0.001,
+            "weight_decay": 0.0
+          },
+          "batch_size": 1024,
+          "epochs": 20,
+          "seed": 42,
+          "weight_init": "he",
+          "early_stopping": true,
+          "patience": 8,
+          "min_delta": 1e-5,
+          "grad_clip": 5.0,
+          "device": "auto"
+        },
+        "param_space": {
+          "hidden_layers": [[256, 128], [512, 256, 128]],
+          "dropout": [0.0, 0.1],
+          "optimizer": [
+            { "name": "adam", "lr": 0.001, "weight_decay": 0.0 },
+            { "name": "adam", "lr": 0.0005, "weight_decay": 0.0 }
           ]
         },
         "tune_hyperparams": false,

@@ -7,7 +7,6 @@ import numpy as np
 from src.models.neural_network.activations import Activation, get_activation
 from src.models.neural_network.losses import Loss, get_loss
 from src.models.neural_network.optimizers import build_optimizer
-from src.models.results import ModelResult
 
 logger = logging.getLogger(__name__)
 
@@ -60,7 +59,6 @@ class FFNNNumpyConfig:
     Feed-forward neural network configuration.
 
     Args:
-        input_dim (int): Number of input features
         hidden_layers (List[int]): List with number of units in each hidden layer
         activations (List[str]): List of activation function names for each hidden layer
         output_activation (str): Activation function name for output layer
@@ -75,7 +73,6 @@ class FFNNNumpyConfig:
         min_delta (float): Minimum change to qualify as improvement for early stopping
         grad_clip (Optional[float]): Gradient clipping threshold (None to disable)
     """
-    input_dim: int
     hidden_layers: List[int]
     activations: List[str]
     output_activation: str
@@ -119,7 +116,9 @@ class FFNNNumpyRegressor:
             logger.error("Length of hidden_layers (%d) does not match length of activations (%d)",
                          len(cfg.hidden_layers), len(cfg.activations))
             raise ValueError("hidden_layers and activations must have same length")
-
+        
+        # Should be set before training
+        self.input_dim = None
         # Set random seed
         self.rng = np.random.default_rng(cfg.seed)
 
@@ -135,14 +134,13 @@ class FFNNNumpyRegressor:
         # Declare weights and biases as empty lists then fill
         self.weights: List[np.ndarray] = []
         self.biases: List[np.ndarray] = []
-        self._init_params()
 
         # Training history for evaluation and plotting
         self.history: Dict[str, list] = {"loss": [], "val_loss": []}
 
     def _init_params(self) -> None:
         # Layer sizes are input + hidden + output
-        layer_sizes = [self.cfg.input_dim] + list(self.cfg.hidden_layers) + [1]
+        layer_sizes = [self.input_dim] + list(self.cfg.hidden_layers) + [1]
         # Fetch weight initialization method
         init = self.cfg.weight_init.lower().strip()
 
@@ -294,6 +292,10 @@ class FFNNNumpyRegressor:
         Returns:
             FFNNNumpyRegressor: Trained model instance
         """
+        # Before training, set input dimension and initialize parameters
+        self.input_dim = X_train.shape[1]
+        self._init_params()
+        
         # Sanitize y inputs to be 2D arrays
         y_train = self._ensure_y(y_train)
         # Do the same for validation data if provided
@@ -413,41 +415,3 @@ class FFNNNumpyRegressor:
         )
         logger.info(f"Model saved to {path}")
         return path
-
-    def train_and_return_result(self, X_train, y_train, X_val, y_val) -> ModelResult:
-        """
-        Train the model and return the result.
-
-        Args:
-            X_train (np.ndarray): Training input data
-            y_train (np.ndarray): Training true labels
-            X_val (np.ndarray): Validation input data
-            y_val (np.ndarray): Validation true labels
-
-        Methods:
-            fit: Train the model
-            predict: Make predictions
-
-        Returns:
-            ModelResult: Result object containing predictions, true labels, history, and parameters
-        """
-        logger.info("Training FFNN(Numpy) model...")
-        self.fit(X_train, y_train, X_val, y_val)
-        logger.info("Training completed.")
-        logger.info("Making predictions on validation data...")
-        y_pred = self.predict(X_val)
-        logger.info("Predictions completed for validation data.")
-        logger.info("Making predictions on training data...")
-        y_pred_train = self.predict(X_train)
-        logger.info("Predictions completed for training data.")
-        y_true = self._ensure_y(y_val)
-
-        # Return the ModelResult dataclass instance
-        return ModelResult(
-            model_name="ffnn_numpy",
-            y_true=y_true,
-            y_pred=y_pred,
-            y_pred_train=y_pred_train,
-            history=self.history,
-            params=self.cfg.__dict__,
-        )
