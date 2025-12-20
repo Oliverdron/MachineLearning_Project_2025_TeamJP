@@ -5,7 +5,7 @@ import pandas as pd
 # create logger for this module
 logger = logging.getLogger(__name__)
 
-def validate_and_fix_numeric(df: pd.DataFrame, target_col: str = "ClaimNb") -> pd.DataFrame:
+def validate_and_fix_numeric(df: pd.DataFrame, target_col: str = "ClaimRate") -> pd.DataFrame:
     """
         Validates and applies safe fixes to numeric columns like:
             - Exposure
@@ -26,7 +26,7 @@ def validate_and_fix_numeric(df: pd.DataFrame, target_col: str = "ClaimNb") -> p
     logger.info("Validate/fix numeric | target_col=%s | df_shape=%s", target_col, df.shape)
 
     # Quick check of expected numeric columns
-    expected_cols = [target_col, "Exposure", "VehAge", "DrivAge", "BonusMalus", "VehPower"]
+    expected_cols = ["ClaimNb", "Exposure", "VehAge", "DrivAge", "BonusMalus", "VehPower"]
     present = [c for c in expected_cols if c in df.columns]
     missing = [c for c in expected_cols if c not in df.columns]
     # Make sure we don't try to fix missing columns
@@ -72,6 +72,9 @@ def validate_and_fix_numeric(df: pd.DataFrame, target_col: str = "ClaimNb") -> p
 
     # ClaimRate: float in [0, some_upper_bound)
     elif target_col == "ClaimRate":
+        # If target column is ClaimRate, create it and add to dataframe (ClaimNb / Exposure)
+        df[target_col] = df["ClaimNb"] / df["Exposure"]
+
         # Use a statistical upper bound to identify bad ClaimRate values
         upper_bound = df[target_col].mean() + 6 * df[target_col].std()
         bad = ~df[target_col].between(0.0, upper_bound, inclusive="both")
@@ -87,7 +90,7 @@ def validate_and_fix_numeric(df: pd.DataFrame, target_col: str = "ClaimNb") -> p
     # Other target columns are not recognized
     else:
         logger.warning("Unknown target_col for numeric validation: %s", target_col)
-        raise ValueError(f"Unknown target_col: {target_col}")
+        raise ValueError(f"Unknown target_col: {target_col}, should be 'ClaimNb' or 'ClaimRate'")
     
 
     # VehAge >= 0: drop rows with negative VehAge

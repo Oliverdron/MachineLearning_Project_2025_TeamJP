@@ -44,7 +44,7 @@ class DataDigestion:
 
         # ID and target columns (with defaults)
         self.id_col = cfg["data"].get("id_col", "IDpol")
-        self.target_col = cfg["data"].get("target_col", "ClaimNb")
+        self.target_col = cfg["data"].get("target_col", "ClaimRate")
 
         # Categorical encoding configuration
         enc = cfg.get("encoding", {})
@@ -175,7 +175,7 @@ class DataDigestion:
         plot_distributions(
             train=train,
             figures_dir=self.figures_dir,
-            claim_col=self.target_col,
+            claim_col="ClaimNb",
         )
         logger.info("Plotting distributions finished")
 
@@ -273,6 +273,8 @@ class DataDigestion:
                 train = train.drop_duplicates(subset=[self.id_col], keep="first")
             else:
                 logger.debug("[DUPES] train %s: none", self.id_col)
+            # Then drop ID column from train to avoid leakage downstream
+            train.drop(columns=[self.id_col], inplace=True)
         else:
             logger.warning("[DUPES] train id_col missing: %s", self.id_col)
     
@@ -284,6 +286,8 @@ class DataDigestion:
                 test = test.drop_duplicates(subset=[self.id_col], keep="first")
             else:
                 logger.debug("[DUPES] test %s: none", self.id_col)
+            # Then drop ID column from test to avoid leakage downstream
+            test.drop(columns=[self.id_col], inplace=True)
         else:
             logger.warning("[DUPES] test id_col missing: %s", self.id_col)
 
