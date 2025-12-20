@@ -1,7 +1,7 @@
 {
   "logging": {
     "log_dir": "data/logging",
-    "console_level": 20,
+    "console_level": "INFO",
     "max_bytes": 10000000,
     "backup_count": 5
   },
@@ -10,9 +10,8 @@
     "train_path": "data/raw/claims_train.csv",
     "test_path": "data/raw/claims_test.csv",
     "processed_dir": "data/processed",
-    "postpca_dir": "data/postpca",
     "id_col": "IDpol",
-    "target_col": "ClaimNb"
+    "target_col": "ClaimRate"
   },
 
   "reports": {
@@ -65,7 +64,7 @@
   },
 
   "pca": {
-    "variance_cutoff": 0.95,
+    "variance_cutoff": 0.90,
     "random_state": 42,
     "figures_dir": "reports/figures/pca"
   },
@@ -98,10 +97,6 @@
     "artifacts_dir": "artifacts/models",
 
     "definitions": {
-
-      /* ----------------------------------------
-         Decision Tree – From Scratch
-         ---------------------------------------- */
       "decision_tree_scratch": {
         "params": {
           "max_depth": null,
@@ -119,9 +114,6 @@
         "n_trials": 5
       },
 
-      /* ----------------------------------------
-         Decision Tree – sklearn
-         ---------------------------------------- */
       "decision_tree_sklearn": {
         "params": {
           "criterion": "squared_error",
@@ -141,9 +133,6 @@
         "n_trials": 10
       },
 
-      /* ----------------------------------------
-         Random Forest – sklearn
-         ---------------------------------------- */
       "random_forest_sklearn": {
         "params": {
           "n_estimators": 200,
@@ -166,9 +155,6 @@
         "n_trials": 10
       },
 
-      /* ----------------------------------------
-         Feedforward Neural Network – NumPy
-         ---------------------------------------- */
       "ffnn_numpy": {
         "params": {
           "input_dim": 0,
