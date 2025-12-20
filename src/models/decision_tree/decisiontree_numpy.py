@@ -1,7 +1,7 @@
 import numpy as np
 import logging
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +50,8 @@ class Node:
         # value: if this node is a leaf, value holds the predicted output (a scalar)
         # if value is not None -> leaf node; if None -> internal node
         self.value = value
+
+        logger.info(f"Created node: feature={feature}, threshold={threshold}, value={value}")
     
     def is_leaf(self):
         """
@@ -109,14 +111,19 @@ class DecisionTreeRegressorFromScratch:
         self.min_samples_leaf = cfg.min_samples_leaf
         self.min_impurity_decrease = cfg.min_impurity_decrease
 
+        logger.info(f"Initialized DecisionTreeRegressorFromScratch with config: {cfg}")
+
         # root will hold the top Node after fitting
         self.root = None
 
         if self.min_samples_split < 2:
+            logger.error("min_samples_split must be >= 2")
             raise ValueError("min_samples_split must be >= 2")
         if self.min_samples_leaf < 1:
+            logger.error("min_samples_leaf must be >= 1")
             raise ValueError("min_samples_leaf must be >= 1")
         if self.max_depth is not None and self.max_depth <= 0:
+            logger.error("max_depth must be positive or None")
             raise ValueError("max_depth must be positive or None")
 
     def fit(self, X, y):
@@ -128,7 +135,9 @@ class DecisionTreeRegressorFromScratch:
 
         This builds the entire tree recursively starting at the root.
         """
+        logger.info("Starting to fit Decision Tree Regressor from scratch.")
         self.root = self._build_tree(X, y, depth=0)
+        logger.info("Finished fitting Decision Tree Regressor from scratch.")
         return self
 
     def _mse(self, y):
@@ -171,6 +180,7 @@ class DecisionTreeRegressorFromScratch:
         best_feature = None
         best_threshold = None
 
+        logger.info("Searching for best split among %d features.", n_features)
         # loop over all features to consider splitting on each one
         for feature_idx in range(n_features):
             # take the column values for this feature across all samples
@@ -218,6 +228,8 @@ class DecisionTreeRegressorFromScratch:
         if best_gain < self.min_impurity_decrease:
             return None, None
 
+        logger.debug(f"Best split found: feature={best_feature}, threshold={best_threshold}, gain={best_gain}")
+        
         return best_feature, best_threshold
 
     def _build_tree(self, X, y, depth):
@@ -238,6 +250,7 @@ class DecisionTreeRegressorFromScratch:
         #
         # If we stop, we create a leaf predicting the mean of targets at this node.
         if (self.max_depth is not None and depth >= self.max_depth) or n_samples < self.min_samples_split:
+            logger.info(f"Stopping at depth {depth} with {n_samples} samples: creating leaf node.")
             return Node(value=np.mean(y))
 
         # ---- Choose the best split ----
@@ -246,6 +259,7 @@ class DecisionTreeRegressorFromScratch:
         # If no split found (either no valid split or not enough impurity decrease),
         # make this a leaf node.
         if feature is None:
+            logger.info(f"No valid split found at depth {depth} with {n_samples} samples: creating leaf node.")
             return Node(value=np.mean(y))
 
         # ---- Split data using the chosen rule ----
@@ -256,6 +270,7 @@ class DecisionTreeRegressorFromScratch:
         left = self._build_tree(X[left_mask], y[left_mask], depth + 1)
         right = self._build_tree(X[right_mask], y[right_mask], depth + 1)
 
+        logger.info(f"Created internal node at depth {depth}: feature={feature}, threshold={threshold}")
         # Return an internal decision node containing split + pointers to children
         return Node(feature=feature, threshold=threshold,
                     left=left, right=right)
@@ -269,6 +284,7 @@ class DecisionTreeRegressorFromScratch:
           check x[node.feature] <= node.threshold
           go to left or right child accordingly
         """
+        logger.debug(f"Traversing node: feature={node.feature}, threshold={node.threshold}")
         # base case: leaf node
         if node.is_leaf():
             return node.value
@@ -290,6 +306,7 @@ class DecisionTreeRegressorFromScratch:
         Returns:
         - numpy array of predictions, shape (n_samples,)
         """
+        logger.info(f"Predicting {X.shape[0]} samples using the fitted decision tree.")
         return np.array([self._traverse_tree(x, self.root) for x in X])
     
     def save(self, path: str) -> str:

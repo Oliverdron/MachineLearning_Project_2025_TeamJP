@@ -28,6 +28,12 @@ def init_registry() -> dict[str, ModelSpec]:
             metric="rmse",
             direction="min",
         ),
+        "decision_tree_scratch": ModelSpec(
+            Config=DecisionTreeScratchConfig,
+            Model=DecisionTreeRegressorFromScratch,
+            metric="rmse",
+            direction="min",
+        ),
         "decision_tree_sklearn": ModelSpec(
             Config=DecisionTreeSklearnConfig,
             Model=SklearnDecisionTreeRegressor,

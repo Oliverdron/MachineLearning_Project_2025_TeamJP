@@ -237,6 +237,8 @@ def run_models(cfg: dict, feature_sets: Dict[str, Dict[str, Optional[np.ndarray]
         spec = registry[model_name]
         model_def = defs[model_name]
 
+        logger.debug("Starting training for model: %s", model_name)
+
         # Fetch feature set requested by this model
         feature_set_name = model_def.get("feature_set", "tree")
         # Sanity check: feature set must be provided
@@ -252,6 +254,9 @@ def run_models(cfg: dict, feature_sets: Dict[str, Dict[str, Optional[np.ndarray]
         y_train = np.asarray(feature_sets[feature_set_name]["y_train"]).reshape(-1)
         X_test = np.asarray(feature_sets[feature_set_name]["X_test"])
         y_test = np.asarray(feature_sets[feature_set_name]["y_test"]).reshape(-1)
+
+        logger.debug("Loaded data for model '%s' with feature set '%s': X_train=%s, y_train=%s, X_test=%s, y_test=%s",
+                     model_name, feature_set_name, X_train.shape, y_train.shape, X_test.shape, y_test.shape)
 
         # Fetch non-tunable params
         params = model_def["params"]
@@ -301,6 +306,7 @@ def run_models(cfg: dict, feature_sets: Dict[str, Dict[str, Optional[np.ndarray]
             },
         }
 
+        logger.debug("Beginning hyperparameter tuning for model '%s'...", model_name)
         # Hyperparameter tuning tryouts
         for candidate_idx, cand_cfg in enumerate(candidates):
             cand = {
@@ -380,6 +386,10 @@ def run_models(cfg: dict, feature_sets: Dict[str, Dict[str, Optional[np.ndarray]
         cv_result.metrics[f"cv_std_{metric}"] = best["std"]
         cv_result.metrics["cv_folds"] = k_folds
 
+        logger.debug(
+            "Completed CV for model=%s | feature_set=%s | cv_mean_%s=%.6f",
+            model_name, feature_set_name, metric, cv_result.metrics[f"cv_mean_{metric}"]
+        )
 
         # --- Stage B: refit best hyperparams on full train, evaluate on test ---
         cfg_obj = spec.Config(**best["cfg"])

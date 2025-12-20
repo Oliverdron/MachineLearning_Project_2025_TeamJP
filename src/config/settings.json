@@ -90,7 +90,10 @@
 
     "enabled": [
       "ffnn_numpy",
-      "ffnn_torch"
+      "ffnn_torch",
+      "decision_tree_scratch",
+      "decision_tree_sklearn",
+      "random_forest_sklearn"
     ],
 
     "save_best_model": true,

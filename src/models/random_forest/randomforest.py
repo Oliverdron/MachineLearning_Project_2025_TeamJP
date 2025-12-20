@@ -1,8 +1,8 @@
 import numpy as np
 from sklearn.ensemble import RandomForestRegressor
 import logging
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass, asdict
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -46,29 +46,25 @@ class SklearnRandomForestRegressor:
         """
         
         self.cfg = cfg
-        self.model = RandomForestRegressor(cfg)
-        self.n_estimators = cfg.n_estimators
-        self.criterion = cfg.criterion
-        self.max_depth = cfg.max_depth
-        self.min_samples_split = cfg.min_samples_split
-        self.min_samples_leaf = cfg.min_samples_leaf
-        self.max_features = cfg.max_features
-        self.bootstrap = cfg.bootstrap
-        self.n_jobs = cfg.n_jobs
-        self.random_state = cfg.random_state
+        self.model = RandomForestRegressor(**asdict(cfg))
         
-        if self.n_estimators <= 0:
+        if self.cfg.n_estimators <= 0:
+            logger.error(f"n_estimators must be > 0, got {self.cfg.n_estimators}")
             raise ValueError("n_estimators must be > 0")
-        if self.min_samples_split < 2:
+        if self.cfg.min_samples_split < 2:
+            logger.error(f"min_samples_split must be >= 2, got {self.cfg.min_samples_split}")
             raise ValueError("min_samples_split must be >= 2")
-        if self.min_samples_leaf < 1:
+        if self.cfg.min_samples_leaf < 1:
+            logger.error(f"min_samples_leaf must be >= 1, got {self.cfg.min_samples_leaf}")
             raise ValueError("min_samples_leaf must be >= 1")
 
     def fit(self, X, y):
+        logger.info(f"Fitting SklearnRandomForestRegressor with {X.shape[0]} samples and {X.shape[1]} features.")
         self.model.fit(X, y)
         return self
 
     def predict(self, X):
+        logger.info(f"Predicting with SklearnRandomForestRegressor for {X.shape[0]} samples.")
         return self.model.predict(X)
 
     def save(self, path: str) -> str:
@@ -107,7 +103,7 @@ class SklearnRandomForestRegressor:
 # while keeping low bias.
 # ---------------------------------------------------
 
-rf = RandomForestRegressor(
+# rf = RandomForestRegressor(
     # ---------------------------------------------
     # n_estimators
     # ---------------------------------------------
@@ -120,7 +116,7 @@ rf = RandomForestRegressor(
     #
     # Typical values: 100–500
     #
-    n_estimators=200,
+    # n_estimators=200,
 
     # ---------------------------------------------
     # criterion
@@ -132,7 +128,7 @@ rf = RandomForestRegressor(
     #   - minimizes Mean Squared Error (MSE)
     #   - default for regression forests
     #
-    criterion="squared_error",
+    # criterion="squared_error",
 
     # ---------------------------------------------
     # max_depth
@@ -146,7 +142,7 @@ rf = RandomForestRegressor(
     # If None, trees grow until other stopping
     # criteria are met.
     #
-    max_depth=None,
+    # max_depth=None,
 
     # ---------------------------------------------
     # min_samples_split
@@ -154,7 +150,7 @@ rf = RandomForestRegressor(
     # Minimum number of samples required to split
     # an internal node in EACH tree.
     #
-    min_samples_split=2,
+    # min_samples_split=2,
 
     # ---------------------------------------------
     # min_samples_leaf
@@ -164,7 +160,7 @@ rf = RandomForestRegressor(
     #
     # Helps smooth predictions and reduce variance.
     #
-    min_samples_leaf=1,
+    # min_samples_leaf=1,
 
     # ---------------------------------------------
     # max_features
@@ -181,7 +177,7 @@ rf = RandomForestRegressor(
     #
     # Random feature selection decorrelates trees.
     #
-    max_features="sqrt",
+    # max_features="sqrt",
 
     # ---------------------------------------------
     # bootstrap
@@ -193,7 +189,7 @@ rf = RandomForestRegressor(
     #   - each tree sees a different random sample
     #   - sampling is done with replacement
     #
-    bootstrap=True,
+    # bootstrap=True,
 
     # ---------------------------------------------
     # oob_score
@@ -204,7 +200,7 @@ rf = RandomForestRegressor(
     # Each tree leaves out ~36% of samples.
     # These can be used as a validation set.
     #
-    oob_score=True,
+    # oob_score=True,
 
     # ---------------------------------------------
     # n_jobs
@@ -213,15 +209,15 @@ rf = RandomForestRegressor(
     #
     # -1 means use ALL available cores.
     #
-    n_jobs=-1,
+    # n_jobs=-1,
 
     # ---------------------------------------------
     # random_state
     # ---------------------------------------------
     # Controls randomness for reproducibility.
     #
-    random_state=42
-)
+#     random_state=42
+# )
 
 # ---------------------------------------------
 #Usage of the Random Forest Regressor

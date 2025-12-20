@@ -1,7 +1,7 @@
 import logging
 import numpy as np
-from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from dataclasses import dataclass, asdict
+from typing import Optional
 from sklearn.tree import DecisionTreeRegressor
 
 logger = logging.getLogger(__name__)
@@ -30,27 +30,25 @@ class DecisionTreeSklearnConfig:
 class SklearnDecisionTreeRegressor:
     def __init__(self, cfg: DecisionTreeSklearnConfig):
         self.cfg = cfg
-        self.model = DecisionTreeRegressor(cfg)
+        self.model = DecisionTreeRegressor(**asdict(cfg))
         
-        self.criterion = cfg.criterion
-        self.max_depth = cfg.max_depth
-        self.min_samples_split = cfg.min_samples_split
-        self.min_samples_leaf = cfg.min_samples_leaf
-        self.max_features = cfg.max_features
-        self.random_state = cfg.random_state
-        
-        if self.criterion not in {"squared_error", "friedman_mse"}:
-            raise ValueError(f"Invalid criterion: {self.criterion}")
-        if self.min_samples_split < 2:
+        if self.cfg.criterion not in {"squared_error", "friedman_mse"}:
+            logger.error(f"Invalid criterion: {self.cfg.criterion}")
+            raise ValueError(f"Invalid criterion: {self.cfg.criterion}")
+        if self.cfg.min_samples_split < 2:
+            logger.error(f"min_samples_split must be >= 2, got {self.cfg.min_samples_split}")
             raise ValueError("min_samples_split must be >= 2")
-        if self.min_samples_leaf < 1:
+        if self.cfg.min_samples_leaf < 1:
+            logger.error(f"min_samples_leaf must be >= 1, got {self.cfg.min_samples_leaf}")
             raise ValueError("min_samples_leaf must be >= 1")
 
     def fit(self, X, y):
+        logger.info(f"Fitting SklearnDecisionTreeRegressor with {X.shape[0]} samples and {X.shape[1]} features.")
         self.model.fit(X, y)
         return self
 
     def predict(self, X):
+        logger.info(f"Predicting with SklearnDecisionTreeRegressor for {X.shape[0]} samples.")
         return self.model.predict(X)
 
     def save(self, path: str) -> str:
@@ -81,7 +79,7 @@ class SklearnDecisionTreeRegressor:
 # of the target values of samples in that region.
 # ---------------------------------------------------
 
-dt = DecisionTreeRegressor(
+# dt = DecisionTreeRegressor(
     # ---------------------------------------------
     # criterion
     # ---------------------------------------------
@@ -96,7 +94,7 @@ dt = DecisionTreeRegressor(
     #   - "absolute_error"  -> minimizes MAE
     #   - "friedman_mse"    -> used in gradient boosting
     #
-    criterion="squared_error",
+    # criterion="squared_error",
 
     # ---------------------------------------------
     # max_depth
@@ -111,7 +109,7 @@ dt = DecisionTreeRegressor(
     # None means the tree grows until other stopping
     # criteria are met.
     #
-    max_depth=5,
+    # max_depth=5,
 
     # ---------------------------------------------
     # min_samples_split
@@ -126,7 +124,7 @@ dt = DecisionTreeRegressor(
     #   - prevents deep trees
     #   - reduces overfitting
     #
-    min_samples_split=10,
+    # min_samples_split=10,
 
     # ---------------------------------------------
     # min_samples_leaf
@@ -139,7 +137,7 @@ dt = DecisionTreeRegressor(
     #
     # This smooths predictions and reduces variance.
     #
-    min_samples_leaf=5,
+    # min_samples_leaf=5,
 
     # ---------------------------------------------
     # min_impurity_decrease
@@ -153,7 +151,7 @@ dt = DecisionTreeRegressor(
     #
     # Acts as a regularization parameter.
     #
-    min_impurity_decrease=0.0,
+    # min_impurity_decrease=0.0,
 
     # ---------------------------------------------
     # random_state
@@ -164,8 +162,8 @@ dt = DecisionTreeRegressor(
     #   - multiple splits are equally good
     #   - used inside ensemble methods
     #
-    random_state=42
-)
+    # random_state=42
+# )
 #-------------------------------
 #usage of the DecisionTreeRegressor
 #-------------------------------
