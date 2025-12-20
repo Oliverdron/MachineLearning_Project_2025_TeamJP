@@ -10,6 +10,7 @@
     "train_path": "data/raw/claims_train.csv",
     "test_path": "data/raw/claims_test.csv",
     "processed_dir": "data/processed",
+    "postpca_dir": "data/postpca",
     "id_col": "IDpol",
     "target_col": "ClaimNb"
   },
@@ -62,9 +63,7 @@
     "onehot_drop": null,
     "unknown_ordinal_value": -1
   },
-<<<<<<< Updated upstream
 
-=======
   "pca": {
     "variance_cutoff": 0.95,
     "random_state": 42,
@@ -77,7 +76,6 @@
     "random_state": 42,
     "figures_dir": "reports/figures/clustering"
   },
->>>>>>> Stashed changes
   "evaluation": {
     "metrics": ["rmse", "mae", "r2"],
     "save_plots": true,

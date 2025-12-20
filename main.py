@@ -1,6 +1,9 @@
 import json
 import logging
-
+import os
+import numpy as np
+from src.features.pca import PCAManager
+from src.features.clustering import ClusterManager
 from src.config.logging import setup_logging
 from src.data.digest_data import DataDigestion
 # pca and clustering imports would go here
@@ -34,8 +37,30 @@ def main() -> None:
 
 
     # 2.) PCA and clustering
-    # Should save the data here in np format as a checkpoint
-    # Then check if these files exist, if so, skip previous steps and do modeling
+  
+    logger.info("Initializing Feature Engineering (PCA + Clustering)...")
+    
+    # Run PCA
+    pca_tool = PCAManager(cfg)
+    train_pca, test_pca = pca_tool.run_pca_pipeline(train, test)
+    
+    # Run Clustering
+    cluster_tool = ClusterManager(cfg)
+    
+   
+    train_final_arr, test_final_arr = cluster_tool.run_clustering_pipeline(train_pca, test_pca)
+
+    # 3.) Checkpoint: Save to disk
+    
+    proc_dir = cfg["data"]["postpca_dir"]
+    os.makedirs(proc_dir, exist_ok=True)
+    
+    np.save(os.path.join(proc_dir, "train_features.npy"), train_final_arr)
+    np.save(os.path.join(proc_dir, "test_features.npy"), test_final_arr)
+    logger.info(f"Feature handoff saved to {proc_dir} as NumPy arrays.")
+
+    # Update variables for the next step (Modeling)
+    train, test = train_final_arr, test_final_arr
 
     # 3.) Modeling
     logger.info("Starting modeling pipeline...")
