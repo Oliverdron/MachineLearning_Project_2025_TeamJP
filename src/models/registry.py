@@ -19,4 +19,5 @@ def init_registry() -> dict[str, ModelSpec]:
             direction="min",
         ),
         # Add other models here
+        # Should have every model and only the ones enabled in settings.json will be used
     }

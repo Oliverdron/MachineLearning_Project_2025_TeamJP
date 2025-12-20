@@ -1,12 +1,11 @@
 import json
 import logging
-import os
-import numpy as np
-from src.features.pca import PCAManager
-from src.features.clustering import ClusterManager
+from pathlib import Path
+
 from src.config.logging import setup_logging
 from src.data.digest_data import DataDigestion
-# pca and clustering imports would go here
+from src.features.pca import PCAManager
+from src.features.clustering import ClusterManager
 from src.models.runner import run_models
 
 
@@ -35,41 +34,42 @@ def main() -> None:
     train, test = dig.run()
     logger.info("Data digestion completed.")
 
-
     # 2.) PCA and clustering
-  
-    logger.info("Initializing Feature Engineering (PCA + Clustering)...")
-    
-    # Run PCA
-    pca_tool = PCAManager(cfg)
-    train_pca, test_pca = pca_tool.run_pca_pipeline(train, test)
-    
+    logger.info("Starting Clustering and PCA pipeline...")
     # Run Clustering
     cluster_tool = ClusterManager(cfg)
+    # Get cluster assignments as pd.Series to merge back later
+    train_clusters, test_clusters = cluster_tool.run_clustering_pipeline(train, test)
+
+    # Run PCA
+    pca_tool = PCAManager(cfg)
+    # Overwrite train/test with PCA versions (cleaned + encoded + scaled + PCA)
+    train, test = pca_tool.run_pca_pipeline(train, test)
     
-   
-    train_final_arr, test_final_arr = cluster_tool.run_clustering_pipeline(train_pca, test_pca)
+    # Merge cluster assignments back to PCA data
+    train = train.join(train_clusters)
+    test = test.join(test_clusters)
 
     # 3.) Checkpoint: Save to disk
+    proc_dir = Path(cfg["data"]["processed_dir"])
+    proc_dir.mkdir(parents=True, exist_ok=True)
     
-    proc_dir = cfg["data"]["postpca_dir"]
-    os.makedirs(proc_dir, exist_ok=True)
-    
-    np.save(os.path.join(proc_dir, "train_features.npy"), train_final_arr)
-    np.save(os.path.join(proc_dir, "test_features.npy"), test_final_arr)
-    logger.info(f"Feature handoff saved to {proc_dir} as NumPy arrays.")
+    train_path = proc_dir / "train_processed.csv"
+    test_path = proc_dir / "test_processed.csv"
 
-    # Update variables for the next step (Modeling)
-    train, test = train_final_arr, test_final_arr
+    train.to_csv(train_path, index=False)
+    test.to_csv(test_path, index=False)
 
-    # 3.) Modeling
+    logger.info(f"Feature handoff saved to {proc_dir} as CSV files.")
+
+    # 4.) Modeling
     logger.info("Starting modeling pipeline...")
-    results = run_models(cfg, train, test)
-    logger.info("Pipeline finished | train_shape=%s | test_shape=%s", train.shape, test.shape)
+    # results = run_models(cfg, train, test)
+    # logger.info("Pipeline finished | train_shape=%s | test_shape=%s", train.shape, test.shape)
     
     # Log results summary
-    for model_name, result in results.items():
-        logger.info("Model: %s | Metrics: %s", model_name, result.metrics)
+    # for model_name, result in results.items():
+        # logger.info("Model: %s | Metrics: %s", model_name, result.metrics)
 
 
 if __name__ == "__main__":
