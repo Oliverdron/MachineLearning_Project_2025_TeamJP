@@ -68,6 +68,7 @@
     "random_state": 42,
     "figures_dir": "reports/figures/pca"
   },
+
   "clustering": {
     "k_min": 2,
     "k_max": 8,
@@ -75,6 +76,7 @@
     "random_state": 42,
     "figures_dir": "reports/figures/clustering"
   },
+
   "evaluation": {
     "metrics": ["rmse", "mae", "r2"],
     "save_plots": true,
@@ -128,7 +130,8 @@
         },
         "tune_hyperparams": false,
         "n_trials": 5
-      }, 
+      },
+
       "ffnn_torch": {
         "feature_set": "nn",
         "params": {
@@ -162,6 +165,68 @@
         },
         "tune_hyperparams": false,
         "n_trials": 5
+      },
+
+      "decision_tree_scratch": {
+        "feature_set": "tree",
+        "params": {
+          "max_depth": 8,
+          "min_samples_split": 20,
+          "min_samples_leaf": 5,
+          "min_impurity_decrease": 0.0001
+        },
+        "param_space": {
+          "max_depth": [4, 6, 8, 12, null],
+          "min_samples_split": [10, 20, 50],
+          "min_samples_leaf": [1, 5, 10],
+          "min_impurity_decrease": [0.0, 0.0001, 0.001]
+        },
+        "tune_hyperparams": false,
+        "n_trials": 20
+      },
+
+      "decision_tree_sklearn": {
+        "feature_set": "tree",
+        "params": {
+          "criterion": "squared_error",
+          "max_depth": 8,
+          "min_samples_split": 20,
+          "min_samples_leaf": 5,
+          "max_features": null,
+          "random_state": 42
+        },
+        "param_space": {
+          "max_depth": [4, 6, 8, 12, null],
+          "min_samples_split": [10, 20, 50],
+          "min_samples_leaf": [1, 5, 10],
+          "max_features": [null, "sqrt", "log2"]
+        },
+        "tune_hyperparams": false,
+        "n_trials": 20
+      },
+
+      "random_forest_sklearn": {
+        "feature_set": "tree",
+        "params": {
+          "n_estimators": 200,
+          "criterion": "squared_error",
+          "max_depth": null,
+          "min_samples_split": 20,
+          "min_samples_leaf": 5,
+          "max_features": "sqrt",
+          "bootstrap": true,
+          "n_jobs": -1,
+          "random_state": 42
+        },
+        "param_space": {
+          "n_estimators": [100, 200, 500],
+          "max_depth": [null, 8, 12],
+          "min_samples_split": [10, 20, 50],
+          "min_samples_leaf": [1, 5, 10],
+          "max_features": ["sqrt", "log2"]
+        },
+        "tune_hyperparams": false,
+        "n_trials": 30
       }
     }
   }
