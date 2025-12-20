@@ -10,6 +10,9 @@ from src.models.results import ModelResult
 
 logger = logging.getLogger(__name__)
 
+# Colors for plotting
+COLOR_PRIMARY = "#234C6A"
+COLOR_SECONDARY  = "#0C2B4E" 
 
 def plot_loss_curves(history: Dict[str, list], out_path: str) -> None:
     """
@@ -42,6 +45,7 @@ def plot_loss_curves(history: Dict[str, list], out_path: str) -> None:
     if val_loss and not all(np.isnan(val_loss)):
         plt.plot(val_loss, label="val_loss")
     # Set labels and legend
+    plt.title("Loss Curve(s)")
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.legend()
@@ -78,6 +82,12 @@ def plot_pred_vs_true(y_true: np.ndarray, y_pred: np.ndarray, out_path: str) -> 
     mx = float(max(y_true.max(), y_pred.max()))
     plt.plot([mn, mx], [mn, mx])
     # Set labels
+    plt.title("Predicted vs True Values")
+    plt.text(
+            0.05, 0.95, "Ideal would be: y_pred = y_true", transform=plt.gca().transAxes,
+            ha="left", va="top",
+            bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor=COLOR_SECONDARY, alpha=0.8)
+    )
     plt.xlabel("y_true")
     plt.ylabel("y_pred")
     plt.tight_layout()
@@ -112,19 +122,88 @@ def plot_residuals(y_true: np.ndarray, y_pred: np.ndarray, out_path: str) -> Non
     # Calculate residuals
     resid = y_true - y_pred
 
+    mu = float(np.mean(resid))
+    sigma = float(np.std(resid, ddof=1)) # ddof for sample stddev
+
     logger.info(f"Plotting residuals histogram to {out_path}")
     # Initialize plot
     plt.figure()
+    ax = plt.gca()
     # Plot residuals histogram
-    plt.hist(resid, bins=50)
+    ax.hist(resid, bins=range(resid.min().astype(int), resid.max().astype(int) + 1), color=COLOR_PRIMARY, edgecolor=COLOR_SECONDARY, alpha=0.85)
+    # Overlay mean line
+    ax.axvline(mu, color=COLOR_SECONDARY, linewidth=2)
+    
     # Set labels
-    plt.xlabel("Residual (y_true - y_pred)")
-    plt.ylabel("Count")
+    ax.set_title("Residuals Histogram (e = y_true - y_pred)")   
+    ax.set_xlabel("Positive: underprediction | Negative: overprediction")
+    ax.set_xlim(resid.min(), resid.max())
+    ax.set_ylabel("Count (log scale)")
+    ax.set_yscale("log")
+
+    # Stats label
+    ax.text(
+        0.98, 0.98,
+        f"μ = {mu:.2f}\nσ = {sigma:.2f}",
+        transform=ax.transAxes,
+        ha="right", va="top",
+        bbox=dict(boxstyle="round,pad=0.3", facecolor="white", edgecolor=COLOR_SECONDARY, alpha=0.8)
+    )
+
     plt.tight_layout()
     # Save plot and close
     plt.savefig(out_path)
     plt.close()
     logger.info("Residuals histogram saved.")
+
+
+def plot_r2_comparison(y_true: np.ndarray, y_pred: np.ndarray, out_path: str, model_name: str = "") -> None:
+    """
+    Plot R^2 for:
+      - Model predictions
+      - Baseline: always predict 0
+      - Baseline: always predict mean(y)
+
+    Interpretation:
+      - R^2 ~ 0 means you're basically at the mean baseline
+      - Negative R^2 means worse than predicting mean(y)
+    """
+    y_true = np.asarray(y_true).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+
+    y_zero = np.zeros_like(y_true, dtype=float)
+    y_mean = np.full_like(y_true, float(np.mean(y_true)), dtype=float)
+
+    r2_model = compute_metrics(["r2"], y_true, y_pred)["r2"]
+    r2_zero = compute_metrics(["r2"], y_true, y_zero)["r2"]
+    r2_mean = compute_metrics(["r2"], y_true, y_mean)["r2"]
+
+    labels = ["Model", "Always 0", "Mean(y)"]
+    vals = [r2_model, r2_zero, r2_mean]
+
+    logger.info(f"Plotting R2 comparison to {out_path}")
+    plt.figure(figsize=(7, 4))
+    plt.bar(labels, vals)
+
+    # Reference line: R² = 0 is the mean baseline
+    plt.axhline(0.0, linestyle="--", linewidth=2, label="R² = 0 (mean baseline)")
+
+    # Value labels
+    for i, v in enumerate(vals):
+        va = "bottom" if v >= 0 else "top"
+        plt.text(i, v, f"{v:.4f}", ha="center", va=va)
+
+    title = "R² comparison"
+    if model_name:
+        title += f" — {model_name}"
+    plt.title(title)
+
+    plt.ylabel("R² (higher is better)")
+    plt.grid(True, axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=150)
+    plt.close()
 
 
 def evaluate_and_plot(result: ModelResult, eval_cfg: dict, plots_dir: Optional[str] = None) -> ModelResult:
@@ -164,6 +243,7 @@ def evaluate_and_plot(result: ModelResult, eval_cfg: dict, plots_dir: Optional[s
             plot_loss_curves(result.history, os.path.join(plots_dir, f"{result.model_name}_loss.png"))
         plot_pred_vs_true(result.y_true, result.y_pred, os.path.join(plots_dir, f"{result.model_name}_pred_vs_true.png"))
         plot_residuals(result.y_true, result.y_pred, os.path.join(plots_dir, f"{result.model_name}_residuals.png"))
+        plot_r2_comparison(result.y_true, result.y_pred, os.path.join(plots_dir, f"{result.model_name}_r2_comparison.png"), model_name=result.model_name)
         logger.info("All plots generated.")
 
     # Return the updated object so upstream code can chain

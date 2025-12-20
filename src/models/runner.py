@@ -126,7 +126,9 @@ def _train_one_fold(spec: ModelSpec, model_cfg: dict, X_tr: np.ndarray, y_tr: np
     """
     # Initialize model configuration and pass it to the model instance
     cfg_obj = spec.Config(**model_cfg)
+    logger.info("Training model %s with config: %s", spec.Model.__name__, cfg_obj)
     model = spec.Model(cfg_obj)
+    logger.info("Model initialized: %s", model)
 
     # Contract: models expose train_and_return_result(X_train, y_train, X_val, y_val) -> ModelResult
     res: ModelResult = model.train_and_return_result(X_tr, y_tr, X_va, y_va)

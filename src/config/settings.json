@@ -87,9 +87,6 @@
     "shuffle": true,
 
     "enabled": [
-      "decision_tree_scratch",
-      "decision_tree_sklearn",
-      "random_forest_sklearn",
       "ffnn_numpy"
     ],
 
@@ -97,67 +94,9 @@
     "artifacts_dir": "artifacts/models",
 
     "definitions": {
-      "decision_tree_scratch": {
-        "params": {
-          "max_depth": null,
-          "min_samples_split": 2,
-          "min_samples_leaf": 1,
-          "min_impurity_decrease": 0.0
-        },
-        "param_space": {
-          "max_depth": [3, 5, 10, null],
-          "min_samples_split": [2, 10, 50],
-          "min_samples_leaf": [1, 5, 20],
-          "min_impurity_decrease": [0.0, 0.001, 0.01]
-        },
-        "tune_hyperparams": true,
-        "n_trials": 5
-      },
-
-      "decision_tree_sklearn": {
-        "params": {
-          "criterion": "squared_error",
-          "max_depth": null,
-          "min_samples_split": 2,
-          "min_samples_leaf": 1,
-          "min_impurity_decrease": 0.0,
-          "random_state": 42
-        },
-        "param_space": {
-          "max_depth": [3, 5, 10, null],
-          "min_samples_split": [2, 10, 50],
-          "min_samples_leaf": [1, 5, 20],
-          "min_impurity_decrease": [0.0, 0.001, 0.01]
-        },
-        "tune_hyperparams": true,
-        "n_trials": 10
-      },
-
-      "random_forest_sklearn": {
-        "params": {
-          "n_estimators": 200,
-          "criterion": "squared_error",
-          "max_depth": null,
-          "min_samples_split": 2,
-          "min_samples_leaf": 1,
-          "max_features": "sqrt",
-          "bootstrap": true,
-          "n_jobs": -1,
-          "random_state": 42
-        },
-        "param_space": {
-          "n_estimators": [100, 200, 400],
-          "max_depth": [null, 10, 20],
-          "min_samples_leaf": [1, 5, 20],
-          "max_features": ["sqrt", "log2"]
-        },
-        "tune_hyperparams": true,
-        "n_trials": 10
-      },
-
       "ffnn_numpy": {
         "params": {
-          "input_dim": 0,
+          "input_dim": 16,
           "hidden_layers": [128, 64],
           "activations": ["relu", "relu"],
           "output_activation": "linear",
@@ -169,7 +108,7 @@
             "weight_decay": 0.0
           },
           "batch_size": 1024,
-          "epochs": 50,
+          "epochs": 10,
           "seed": 42,
           "weight_init": "he",
           "early_stopping": true,
@@ -180,14 +119,14 @@
         "param_space": {
           "hidden_layers": [[128, 64], [256, 128]],
           "batch_size": [512, 1024],
-          "epochs": [50, 100],
+          "epochs": [10, 20, 50, 100],
           "optimizer": [
             { "name": "momentum", "lr": 0.001, "beta": 0.9, "weight_decay": 0.0 },
             { "name": "sgd", "lr": 0.005, "weight_decay": 0.0 }
           ]
         },
         "tune_hyperparams": false,
-        "n_trials": 10
+        "n_trials": 5
       }
     }
   }
